@@ -1,0 +1,3 @@
+pandas==1.3.4
+dwave-ocean-sdk==4.5.0
+beautifultable

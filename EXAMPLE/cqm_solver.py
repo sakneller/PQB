@@ -361,7 +361,7 @@ def save_cqm_results(cqm, solutions, formatted_results, label):
         formatted output of CQM, as returned by `format_cqm_results`
     """
 
-    folder = os.path.join("/app/results/cqm_results", label)
+    folder = os.path.join("./output/results/cqm_results", label)
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -532,12 +532,13 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
     table.columns.width = [(120 - sum(tmp)) // 5] * 5 + tmp
     print(table)
     print()
-    print(f"Results written to {result_loc.replace('/app', 'data')}")
+    print(f"Results written to {result_loc.replace('./output', 'data')}")
 
 
 if __name__ == "__main__":
 
-    INPUT_CSV = "/app/data/chicken_waffles_data.csv"
+    #INPUT_CSV = "/app/data/chicken_waffles_data.csv"
+    INPUT_CSV = "./data/chicken_waffles_data.csv"
     OBJECTIVE_COLUMN = "price"
     ONE_HOT_COLUMN = "item_type"
     CONSTRAINTS = [{"col_name" : "calories", "operator" : "<=", "comparison_value" : 700}]

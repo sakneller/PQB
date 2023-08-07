@@ -1,6 +1,6 @@
 name, item_type , price ,calories,protein,sodium,carbs,color,dietary option
-The Classic, waffle , $ 1.00 ,358.0,9.7,629.0,40.0,Brown,V
-Sweet Potato, waffle , $ 108.00 ,284.4,9.7,42.7,47.0,Orange,V
+The Classic, waffle , $ 8.00 ,358.0,9.7,629.0,40.0,Brown,V
+Sweet Potato, waffle , $ 8.00 ,284.4,9.7,42.7,47.0,Orange,V
 The Gingerbread, waffle , $ 9.00 ,244.9,8.9,403.0,46.3,Maroon,V
 The Vegan, waffle , $ 9.00 ,278.9,6.6,885.2,29.2,Beige,VG
 Strawberry-Creme,smear, $ 1.75 ,70.0,1.0,90.0,6.0,Pink,V

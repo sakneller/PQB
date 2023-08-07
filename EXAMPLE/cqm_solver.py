@@ -11,6 +11,28 @@ import dimod
 from dwave.system import LeapHybridCQMSampler
 from neal import SimulatedAnnealingSampler
 
+#8/3/23 ------
+
+import sys
+
+dataInput = input("What is the name of your data file?")
+dataFile = "/workspace/PQB/EXAMPLE/data/"+dataInput
+if os.path.isfile(dataFile) == False:
+    print("Sorry, the data file you specified does not exist!")
+    sys.exit(0)
+
+outputFileName = input("What do you want the file name of your output file to be?")
+outputFile = "/workspace/PQB/EXAMPLE/output/"+outputFileName
+print(outputFile)
+#if os.path.isfile("outputFile") == True:
+#    print("Sorry, the output file you specified already exists!")
+#    sys.exit(0)
+
+test = input("Do you want to keep running the program?")
+if test.title() == "No":
+    sys.exit(0)
+
+#-------
 
 def create_binary_vars(df):
     """
@@ -538,13 +560,14 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
 if __name__ == "__main__":
 
     #INPUT_CSV = "/app/data/chicken_waffles_data.csv"
-    INPUT_CSV = "./data/chicken_waffles_data.csv"
+    INPUT_CSV = dataFile
     OBJECTIVE_COLUMN = "price"
     ONE_HOT_COLUMN = "item_type"
     CONSTRAINTS = [{"col_name" : "calories", "operator" : "<=", "comparison_value" : 700}]
     # name to associate with DWave sampling run
-    NAME = "Chicken_Waffles_CQM"
+    NAME = outputFileName
     # human-readable timestamp (in case of multiple runs)
     TIMESTAMP = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
     solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS, f"{NAME}-{TIMESTAMP}")
+    #solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS)

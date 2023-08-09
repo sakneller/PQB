@@ -1,0 +1,10 @@
+path, method, length , time , cost , env_cost
+Path_AB_1, Walk, 6, 60, 0, 0
+Path_AC_1, Bus,  8, 10, 2, 2
+Path_AC_2, Drive,8, 8,  1, 20
+Path_AE_1, Train,30,10, 10,2
+Path_BC_1, Walk, 6, 60, 0, 0
+Path_CD_1, Walk, 6, 60, 0, 0
+Path_CE_1, Bus,  8, 10, 1, 2
+Path_CE_2, Drive,8, 8,  2, 20
+Path_DE_1, Walk, 6, 60, 0, 0

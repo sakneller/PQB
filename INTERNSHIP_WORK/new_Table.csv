@@ -1,0 +1,8 @@
+method, length, time, cost, env_cost, leg
+Walk Only,    24, 240, 0,  0,AE
+Bus Only,     16, 20,  4,  4,AE
+Drive Only,   16, 16,  0,  40,AE
+Train only,   30, 10,  10, 2,AE
+Bus & Walk,   20, 130, 2,  2,AE
+Drive & Walk, 20, 128, 0,  2,AE
+Drive & Bus,  16, 18,  2,  22,AE

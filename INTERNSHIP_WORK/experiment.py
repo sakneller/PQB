@@ -14,6 +14,7 @@ from neal import SimulatedAnnealingSampler
 
 import numpy as np
 
+
 #8/3/23 ------
 
 import sys
@@ -124,11 +125,11 @@ def format_constraints(df, info):
     """
 
     result_inequality = ""
-    for item in info:
+    """for item in info:
         terms = " + ".join(df[item["col_name"]].map(str) + df["x_values"])
         op = item["operator"]
         value = str(item["comparison_value"])
-        result_inequality += " ".join([terms, op, value]) + "\n"
+        result_inequality += " ".join([terms, op, value]) + "\n" """
     return result_inequality
 
 
@@ -509,13 +510,14 @@ def print_hamiltonian(df, objective_column, one_hot_column, constraints):
     objective = format_objective(df, objective_column)
 
     # Get one-hot constraint string
-    one_hot = format_one_hot(df, one_hot_column)
+    #one_hot = format_one_hot(df, one_hot_column)
 
     # Get constraint string
     ineq = format_constraints(df, constraints)
 
     # Format and print QUBO
-    print(show_cqm(objective, [one_hot, ineq]))
+    #print(show_cqm(objective, [one_hot, ineq]))
+    print(show_cqm(objective, [ineq]))
 
 
 def resolve_cqm(df, objective_column, one_hot_column, constraints, label):
@@ -549,11 +551,12 @@ def resolve_cqm(df, objective_column, one_hot_column, constraints, label):
     #define_one_hot(df, cqm_model, one_hot_column)
 
     #new one-hot function to set one-hot constraints
-    define_one_hot(df, cqm_model, one_hot_column)
+    #define_one_hot(df, cqm_model, one_hot_column)
 
     # Set inequality constraints
-    define_constraints(df, cqm_model, constraints)
-
+    define_constraints(df, cqm_model, constraints_1)
+    define_constraints(df, cqm_model, CONSTRAINTS_2)
+    define_constraints(df, cqm_model, CONSTRAINTS_3)
     # Print additional CQM information
     print_cqm_stats(cqm_model)
 
@@ -626,29 +629,29 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
     print(f"Results written to {result_loc.replace('./output', 'data')}")
 
 #8/12/23 - 8/14/23
-def create_new_table(df):
-    df[leg]="AE"
-    length=0
-    time=0
-    cost=0
-    env_cost=0
-    segment_start="A"
-    segment_end="E"
-    while segment_end != "E":
+#def create_new_table(df):
+#    df[leg]="AE"
+#    length=0
+#    time=0
+#    cost=0
+#    env_cost=0
+#    segment_start="A"
+#    segment_end="E"
+#    while segment_end != "E":
 
         #from start point (A), check where we can move to in an if or while loop, and check if where we finish =E. create counter to check #of steps
         #if it finishes at E, then append row with updated characteristics to new table
         #
 
-        segment_end=end[randint(1,4)]
+#        segment_end=end[randint(1,4)]
         #Add the length, time, and cost properties of segment chosen here
-        length+=
-        time+=
-        cost+=
-        env_cost+=
-        segment_end=
-        if segment_end=="E" then
-            .append()
+#        length+=
+#        time+=
+#        cost+=
+#        env_cost+=
+#        segment_end=
+#        if segment_end=="E" then
+#            .append()
             
     
 #-------
@@ -659,11 +662,14 @@ if __name__ == "__main__":
     INPUT_CSV = dataFile
     OBJECTIVE_COLUMN = "env_cost"
     ONE_HOT_COLUMN = "leg"
-    CONSTRAINTS = [{"col_name" : "time", "operator" : "<=", "comparison_value" : 60}]
+    constraints_1 = [{"col_name" : "time", "operator" : "<=", "comparison_value" : 60}]
+    CONSTRAINTS_2 = [{"col name": "start_1", "operator" : "=", "comparison value": 1}]
+    CONSTRAINTS_3 = [{"col name": "end_1", "operator" : "=", "comparison value": 5}]
+    constraints=[(constraints_1,CONSTRAINTS_2,CONSTRAINTS_3)]
     # name to associate with DWave sampling run
     NAME = outputFileName
     # human-readable timestamp (in case of multiple runs)
     TIMESTAMP = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS, f"{NAME}-{TIMESTAMP}")
+    solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, constraints, f"{NAME}-{TIMESTAMP}")
     #solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS)

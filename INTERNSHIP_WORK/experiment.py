@@ -125,15 +125,15 @@ def format_constraints(df, info):
     """
 
     result_inequality = ""
-    """for item in info:
+    for item in info:
         terms = " + ".join(df[item["col_name"]].map(str) + df["x_values"])
         op = item["operator"]
         value = str(item["comparison_value"])
-        result_inequality += " ".join([terms, op, value]) + "\n" """
+        result_inequality += " ".join([terms, op, value]) + "\n"
     return result_inequality
 
 
-def show_cqm(objective, constraints):
+def show_cqm(objective, CONSTRAINTS):
     """
     Formats the objective and constraints for pretty-printing
     Returns: str
@@ -144,7 +144,7 @@ def show_cqm(objective, constraints):
         the constraints
     """
 
-    return "Minimize " + objective + "\n\nConstraints\n" + "\n".join(constraints)
+    return "Minimize " + objective + "\n\nConstraints\n" + "\n".join(CONSTRAINTS)
 
 
 def create_cqm_model():
@@ -223,9 +223,9 @@ def define_one_hot_new(df, cqm, col_name):
     paths_total = sum(l["length"] for p in paths)
     max_env_cost = round(paths_total * np.mean([min(env_cost), max(env_cost)]))
 
-    for leg in range(num_paths):
-        cqm.add_constraint(dimod.quicksum(t[num_modes*leg:num_modes*leg+num_modes]) == 1,
-            label=f"One-hot path{leg}")
+    for path in range(num_paths):
+        cqm.add_constraint(dimod.quicksum(t[num_modes*path:num_modes*path+num_modes]) == 1,
+            label=f"One-hot path{path}")
     cqm.add_constraint((t, "Environmental Cost", paths, locomotion_vals) <= max_env_cost,
         label="Total cost",
         weight=weight_vals["weight_cost"]["weight"],
@@ -238,7 +238,7 @@ def define_one_hot_new(df, cqm, col_name):
     
 
 
-def define_constraints(df, cqm, constraints):
+def define_constraints(df, cqm, CONSTRAINTS):
     """
     Applies inequality constraints to the CQM
 
@@ -250,8 +250,9 @@ def define_constraints(df, cqm, constraints):
         - operators: "=", "<=", ">=", ">", "<" or "="
         - comparison_values: right-hand side values of constraints
     """
-
-    for item in constraints:
+    
+    for item in CONSTRAINTS:
+        print(item)
         constraint_terms = df[item["col_name"]] * df["binary_obj"]
 
         if item["operator"] == "<=":
@@ -266,7 +267,6 @@ def define_constraints(df, cqm, constraints):
             cqm.add_constraint(sum(constraint_terms) == item["comparison_value"])
         else:
             raise Exception(f"Your choice of {item['comparison_value']} is invalid. Choose from '>', '<', '>=', '<=' or '='")
-
 
 def print_cqm_stats(cqm):
     """
@@ -328,7 +328,7 @@ def print_cqm_stats(cqm):
     subtables.append(bt.BeautifulTable())
     subtables[-1].columns.header = ["EQ", "LT", "GT"]
     subtables[-1].rows.append(
-        [num_equality_constraints - num_discretes, num_le_inequality_constraints, num_ge_inequality_constraints]
+        [num_equality_constraints - num_discretes, num_le_inequality_constraints, CONSTRAINTS]
     )
     # subtable styling
     for tbl in subtables:
@@ -392,41 +392,84 @@ def format_cqm_results(df, results):
     results : dimod.SampleSet
         filtered CQM results, as returned by `cqm_sample`
     """
+    for sample in results.record:  
+        counter=0
+        modes_chosen=[]
+        index_List=[]
 
+
+        #new function to detect when value of index in index 1 != 0 and find what that equals in modes
+        #print what it equals in mode in format: "(leg): (mode)"
+        #also include number of times this solution occurred in the solution
+        #calculate total of all characteristics for each chosen path
+
+        if sample not in modes_chosen:
+            modes_chosen.append(sample)
+            counter+=1
+
+            #for indexSearch in sample[0]:
+            #    if indexSearch == 1:
+            #        index_List.append(indexSearch)
+                    #print(indexSearch)
+        
+            for indexSearch in range(len(sample[0])):
+                if sample[0][indexSearch] == 1:
+                    index_List.append(indexSearch)
+    print(index_List)
+        #for i in sample:
+        #    print(i)
+        #    if 1. in sample:
+        #        modes_chosen.append([i]+" ")
+
+
+
+    print(modes_chosen)
+    print("Number of modes chosen:", counter)
+
+
+    counter2=1
+    for item in index_List:
+        print("Mode",counter2,"chosen:",df["modes"][item]," for leg","leg")
+    
+                
     formatted_results = []
     imp_column_names = df.columns[2:-5]
     header = list(df["leg"].unique()) + list(imp_column_names) + ["energy", "num_occ"]
     formatted_results.append(header)
 
     # if no feasible solutions were found,
+
     if results is None:
         return formatted_results
 
     # otherwise, build the data table
-    for record in results.record:
-        sample = record["sample"]
-        x_indicies = [index for index, value in enumerate(sample) if value == 1]
-        x_values = [results.variables[index] for index in x_indicies]
-        decision_data_df = df.loc[df["index"].isin(x_values)]
-        samples = []
-        num_of_legs = len(df["leg"].unique())
+    #for record in results.record:
+    #    sample = record["sample"]
+    #    x_indicies = [index for index, value in enumerate(sample) if value == 1]
+    #    x_values = [results.variables[index] for index in x_indicies]
+    #    decision_data_df = df.loc[df["index"].isin(x_values)]
+    #    samples = []
+    #    num_of_legs = len(df["leg"].unique())
 
-        for leg in df["leg"].unique():
-            item_index_sample = decision_data_df.loc[decision_data_df["leg"] == leg, "method"]
-            item_index_sample_two = decision_data_df.loc[decision_data_df["leg"] == leg, "env_cost"]
-            if (len(item_index_sample) != 1) or (len(item_index_sample_two) != 1):
-                print("One-Hot constraint not met")
-                continue
-            samples.append(item_index_sample.to_list()[0])
+    #    for leg in df["leg"].unique():
+    #        item_index_sample = decision_data_df.loc[decision_data_df["leg"] == leg, "modes"]
+    #        item_index_sample_two = decision_data_df.loc[decision_data_df["leg"] == leg, "env_cost"]
+            #if (len(item_index_sample) != 1) or (len(item_index_sample_two) != 1):
+            #    print("One-Hot constraint not met")
+            #    continue
 
-        if len(samples) != num_of_legs:
-            print("Number of types of items should equal length of samples list")
-            continue
+            #samples.append(item_index_sample.to_list()[0])
 
-        samples.extend([str(sum(decision_data_df[column_name])) for column_name in imp_column_names])
-        samples.append(str(record["energy"]))
-        samples.append(str(record["num_occurrences"]))
-        formatted_results.append(samples)
+    #    if len(samples) != num_of_legs:
+    #        print("Number of types of items should equal length of samples list")
+    #        continue
+
+
+
+    #    samples.extend([str(sum(decision_data_df[column_name])) for column_name in imp_column_names])
+    #    samples.append(str(record["energy"]))
+    #    samples.append(str(record["num_occurrences"]))
+        formatted_results.append(modes_chosen)
 
     return formatted_results
 
@@ -488,7 +531,7 @@ def load_results(results_path):
     return loaded_sample_set
 
 
-def print_hamiltonian(df, objective_column, one_hot_column, constraints):
+def print_hamiltonian(df, objective_column, one_hot_column, CONSTRAINTS):
     """
     Formats and prints the Hamiltonian corresponding to the CQM defined by the
     arguments.
@@ -513,14 +556,14 @@ def print_hamiltonian(df, objective_column, one_hot_column, constraints):
     #one_hot = format_one_hot(df, one_hot_column)
 
     # Get constraint string
-    ineq = format_constraints(df, constraints)
+    ineq = format_constraints(df, CONSTRAINTS)
 
     # Format and print QUBO
     #print(show_cqm(objective, [one_hot, ineq]))
-    print(show_cqm(objective, [ineq]))
+    print(show_cqm(objective, ineq))
 
 
-def resolve_cqm(df, objective_column, one_hot_column, constraints, label):
+def resolve_cqm(df, objective_column, one_hot_column, CONSTRAINTS, label):
     """
     Builds and solves the CQM model as defined by the arguments. Also formats
     and saves the results from DWave.
@@ -554,9 +597,9 @@ def resolve_cqm(df, objective_column, one_hot_column, constraints, label):
     #define_one_hot(df, cqm_model, one_hot_column)
 
     # Set inequality constraints
-    define_constraints(df, cqm_model, constraints_1)
-    define_constraints(df, cqm_model, CONSTRAINTS_2)
-    define_constraints(df, cqm_model, CONSTRAINTS_3)
+    define_constraints(df, cqm_model, CONSTRAINTS)
+    #define_constraints(df, cqm_model, CONSTRAINTS_2)
+    #define_constraints(df, cqm_model, CONSTRAINTS_3)
     # Print additional CQM information
     print_cqm_stats(cqm_model)
 
@@ -594,7 +637,7 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
     df = read_and_format(input_csv)
     print(df)
     # Print problem to screen
-    print_hamiltonian(df, objective_column, one_hot_column, constraints)
+    print_hamiltonian(df, objective_column, one_hot_column, CONSTRAINTS)
 
     #sys.exit(0)
 
@@ -605,13 +648,16 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
     loaded_results = load_results(result_loc)
 
     # Print formatted results to screen
-    data = format_cqm_results(df, loaded_results)
+    #data = format_cqm_results(df, loaded_results)
+
     table = bt.BeautifulTable(maxwidth=120)
+
     # add data to table
-    table.columns.header = data[0]
-    for row in data[1:]:
-        table.rows.append(row)
+    #table.columns.header = data[0]
+    #for row in data[1:]:
+    #    table.rows.append(row)
     # style stuff
+
     table.columns.header.separator = "="
     # override padding so it's not so wide
     table.columns.padding_left = 0
@@ -662,14 +708,18 @@ if __name__ == "__main__":
     INPUT_CSV = dataFile
     OBJECTIVE_COLUMN = "env_cost"
     ONE_HOT_COLUMN = "leg"
-    constraints_1 = [{"col_name" : "time", "operator" : "<=", "comparison_value" : 60}]
-    CONSTRAINTS_2 = [{"col name": "start_1", "operator" : "=", "comparison value": 1}]
-    CONSTRAINTS_3 = [{"col name": "end_1", "operator" : "=", "comparison value": 5}]
-    constraints=[(constraints_1,CONSTRAINTS_2,CONSTRAINTS_3)]
+    CONSTRAINTS = [{"col_name" : "time", "operator" : "<=", "comparison_value" : 60}]
+    CONSTRAINTS.append( {"col_name" : "start", "operator" : "==", "comparison_value" : 1} )
+    CONSTRAINTS.append( {"col_name" : "end", "operator" : "==", "comparison_value" : 5} )
+
+    #CONSTRAINTS_2 = [{"col name": "start_1", "operator" : "=", "comparison value": 1}]
+    #CONSTRAINTS_3 = [{"col name": "end_1", "operator" : "=", "comparison value": 5}]
+    #constraints=[constraints_1,constraints_2,CONSTRAINTS_3]
+    #constraints=[constraints_1,constraints_2]
     # name to associate with DWave sampling run
     NAME = outputFileName
     # human-readable timestamp (in case of multiple runs)
     TIMESTAMP = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, constraints, f"{NAME}-{TIMESTAMP}")
+    solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS, f"{NAME}-{TIMESTAMP}")
     #solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS)

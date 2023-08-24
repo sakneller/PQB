@@ -1,0 +1,13 @@
+1. format of the origin can be an address, coordinates, or just a town/city name like here
+2. only 1 space after the equal sign!
+
+
+
+origins = Cary,NC,USA
+origins = Durham,NC,USA
+destinations = Chapel Hill,NC,USA 
+destinations = Fayettevile,NC,USA
+modes = driving 
+mode = walking 
+mode = transit
+mode = bicycling

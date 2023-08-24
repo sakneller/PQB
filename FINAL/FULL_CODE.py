@@ -1,6 +1,31 @@
+#
+# Copyright 2014 Google Inc. All rights reserved.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+
+"""Performs requests to the Google Maps Distance Matrix API."""
+
+import googlemaps
+from googlemaps import convert
+import json
+from json import *
+
+import datetime as DT
+
 import csv
 import datetime
-import json
 import os
 import pickle
 
@@ -14,29 +39,266 @@ from neal import SimulatedAnnealingSampler
 
 import numpy as np
 
-#8/3/23 ------
-
 import sys
 
-dataInput = input("What is the name of your data file?")
-dataFile = "/workspace/PQB/INTERNSHIP_WORK/"+dataInput
+import re
+
+def distance_matrix(client, origins, destinations,
+                    mode=None, language=None, avoid=None, units=None,
+                    departure_time=None, arrival_time=None, transit_mode=None,
+                    transit_routing_preference=None, traffic_model=None, region=None):
+    """ Gets travel distance and time for a matrix of origins and destinations.
+
+    :param origins: One or more addresses, Place IDs, and/or latitude/longitude
+        values, from which to calculate distance and time. Each Place ID string
+        must be prepended with 'place_id:'. If you pass an address as a string,
+        the service will geocode the string and convert it to a
+        latitude/longitude coordinate to calculate directions.
+    :type origins: a single location, or a list of locations, where a
+        location is a string, dict, list, or tuple
+
+    :param destinations: One or more addresses, Place IDs, and/or lat/lng values
+        , to which to calculate distance and time. Each Place ID string must be
+        prepended with 'place_id:'. If you pass an address as a string, the
+        service will geocode the string and convert it to a latitude/longitude
+        coordinate to calculate directions.
+    :type destinations: a single location, or a list of locations, where a
+        location is a string, dict, list, or tuple
+
+    :param mode: Specifies the mode of transport to use when calculating
+        directions. Valid values are "driving", "walking", "transit" or
+        "bicycling".
+    :type mode: string
+
+    :param language: The language in which to return results.
+    :type language: string
+
+    :param avoid: Indicates that the calculated route(s) should avoid the
+        indicated features. Valid values are "tolls", "highways" or "ferries".
+    :type avoid: string
+
+    :param units: Specifies the unit system to use when displaying results.
+        Valid values are "metric" or "imperial".
+    :type units: string
+
+    :param departure_time: Specifies the desired time of departure.
+    :type departure_time: int or datetime.datetime
+
+    :param arrival_time: Specifies the desired time of arrival for transit
+        directions. Note: you can't specify both departure_time and
+        arrival_time.
+    :type arrival_time: int or datetime.datetime
+
+    :param transit_mode: Specifies one or more preferred modes of transit.
+        This parameter may only be specified for requests where the mode is
+        transit. Valid values are "bus", "subway", "train", "tram", "rail".
+        "rail" is equivalent to ["train", "tram", "subway"].
+    :type transit_mode: string or list of strings
+
+    :param transit_routing_preference: Specifies preferences for transit
+        requests. Valid values are "less_walking" or "fewer_transfers".
+    :type transit_routing_preference: string
+
+    :param traffic_model: Specifies the predictive travel time model to use.
+        Valid values are "best_guess" or "optimistic" or "pessimistic".
+        The traffic_model parameter may only be specified for requests where
+        the travel mode is driving, and where the request includes a
+        departure_time.
+
+    :param region: Specifies the prefered region the geocoder should search
+        first, but it will not restrict the results to only this region. Valid
+        values are a ccTLD code.
+    :type region: string
+
+    :rtype: matrix of distances. Results are returned in rows, each row
+        containing one origin paired with each destination.
+    """
+
+    params = {
+        "origins": convert.location_list(origins),
+        "destinations": convert.location_list(destinations)
+    }
+
+    if mode:
+        # NOTE(broady): the mode parameter is not validated by the Maps API
+        # server. Check here to prevent silent failures.
+        if mode not in ["driving", "walking", "bicycling", "transit"]:
+            raise ValueError("Invalid travel mode.")
+        params["mode"] = mode
+
+    if language:
+        params["language"] = language
+
+    if avoid:
+        if avoid not in ["tolls", "highways", "ferries"]:
+            raise ValueError("Invalid route restriction.")
+        params["avoid"] = avoid
+
+    if units:
+        params["units"] = units
+
+    if departure_time:
+        params["departure_time"] = convert.time(departure_time)
+
+    if arrival_time:
+        params["arrival_time"] = convert.time(arrival_time)
+
+    if departure_time and arrival_time:
+        raise ValueError("Should not specify both departure_time and"
+                         "arrival_time.")
+
+    if transit_mode:
+        params["transit_mode"] = convert.join_list("|", transit_mode)
+
+    if transit_routing_preference:
+        params["transit_routing_preference"] = transit_routing_preference
+
+    if traffic_model:
+        params["traffic_model"] = traffic_model
+
+    if region:
+        params["region"] = region
+
+    return client._request("/maps/api/distancematrix/json", params)
+
+key="AIzaSyApCDXCL7ELIu4HsLET8KFdKTUNrt2n8yc"
+client=googlemaps.Client(key)
+
+#Add input for origin and destination?
+origins = []
+destinations = []
+modes = []
+
+with open('/workspace/PQB/FINAL/POI_TABLE.txt','r') as f:
+    lines = f.readlines()
+
+for line in lines:
+    if "origins" in line:
+        words = re.split('= |"|\n', line)
+        origins.append(words[2])
+
+    if "destinations" in line:
+        words = re.split('= |"|\n', line)
+        destinations.append(words[2]) 
+
+    if "modes" in line:
+        words = re.split('= |"|\n', line)
+        modes.append(words[2]) 
+
+#print(origins)
+#print(destinations)
+#print(modes)
+
+#sys.exit()
+
+#origins=["Cary,NC,USA", "Durham,NC,USA"]
+#destinations=["Chapel Hill,NC,USA", "Fayettevile,NC,USA"]
+#modes=["driving", "walking", "transit","bicycling"]
+
+#dataTable = {"Origin":[],"Destination":[],"Method":[],"Length":[], "Duration":[]}
+df = pd.DataFrame()
+df2 = pd.DataFrame()
+
+for o in origins:
+    for d in destinations:
+        for m in modes:
+            temp= distance_matrix(client,origins=o,destinations=d, mode=m)
+
+            level0 = ["distance"]
+            level1 = ["value"]
+            level2 = ["duration"]
+
+            for l in level0:
+                for item in level1:
+                    for item2 in level2:
+                        
+                        try:
+                            length_of_trip = temp["rows"][0]["elements"][0][l][item]
+                            duration_of_trip = temp["rows"][0]["elements"][0][item2][item]
+
+                            duration_in_minutes = round(temp["rows"][0]["elements"][0][item2][item] / 60 , 3)
+                            length_in_miles = round(3.28084 * temp["rows"][0]["elements"][0][l][item] / 5280, 3)
+
+                            env_cost=0
+                            if m == "walking" or m == "bicycling":
+                                env_cost = 0
+                            elif m == "driving":
+                                env_cost = round(length_in_miles * 0.77,3)
+                            else:
+                                env_cost = round(0.59 * length_in_miles, 3)
+
+                            leg = o + " to " + d
+
+
+                            cost=0
+                            if m == "walking" or m == "bicycling":
+                                cost = 0
+                            elif m == "driving":
+                                cost = round(length_in_miles * 0.66,3)
+                            else:
+                                cost = round(0.0625 * length_in_miles, 3)
+
+                            new_row_list = { "start" : o, "end" : d, "modes" : m, "length" : length_in_miles, "time" : duration_in_minutes, "cost":cost, "env_cost" : env_cost , "leg": leg}
+                            df = pd.concat([df, pd.DataFrame([new_row_list])], ignore_index=True)
+
+                        except KeyError:
+                            print("ERROR: VALUE UNDEFINED")
+
+#sys.exit()
+df.to_csv("/workspace/PQB/FINAL/data/maps_data.csv")
+
+
+
+
+
+
+
+
+
+#From the intern 1:
+""" Most of this code has been taken from the example Chicken & Waffle problem from the White Paper made by 
+Polaris Quantum Biotech  regarding the usage of Quantum Computing  to solve a multivariable optimization to minimize 
+both the calories and the price of a meal from a menu that they created. 
+
+The constraints on this problem were that the CQM had to choose 1 item from each of the 5 categories: waffle, smear,
+chicken, drizzle, and a side. The CQM also had to keep the total number of calories below 700 while minizming the price.
+
+LINK TO PAPER: https://arxiv.org/pdf/2303.15419.pdf"""
+
+
+
+"""HOWEVER, the purpose of my internship was to repurpose this existing code and make it so that when the user input a table into
+the function it determined the best possible path(s) between two points by either walking, biking, driving, taking the bus, or the train."""
+
+
+
+#From the Intern 2:
+"""Here we are importing all the necessary libraries for the CQM to run."""
+
+
+#From the Intern 3:
+"""This part of the code ask the user to input the data file where their data is stored, and exits if the file does not exist.
+It also asks what the user wants their output file to be called, and asks if they want to exit the program, just in case."""
+
+
+#dataInput = input("What is the name of your data file?")
+dataFile = "/workspace/PQB/FINAL/data/maps_data.csv"
+
 if os.path.isfile(dataFile) == False:
     print("Sorry, the data file you specified does not exist!")
     sys.exit(0)
 
 outputFileName = input("What do you want the file name of your output file to be?")
-outputFile = "/workspace/PQB/INTERNSHIP_WORK/output/"+outputFileName
+outputFile = "/workspace/PQB/FINAL/output/"+outputFileName
 print(outputFile)
-#if os.path.isfile("outputFile") == True:
-#    print("Sorry, the output file you specified already exists!")
-#    sys.exit(0)
 
 test = input("Do you want to keep running the program?")
 if test.title() == "No":
     sys.exit(0)
-    
 
-#-------
+#From the Intern 4
+"""From here on, the majority of the code & comments were created by Polaris QB unless noted otherwise.
+There are comments inside most of the function explaining the functionality of them."""
 
 
 def create_binary_vars(df):
@@ -67,16 +329,11 @@ def read_and_format(csv_path):
     # Format CSV
     df = df.rename(lambda name : name.strip(), axis="columns")
     df["index"] = df.index
-    # Remove dollar-sign and convert price to float
-
-    #Format of how to change values in csv table if necessary
-    #df["price"] = df.apply(lambda row : float(row["price"].replace("$", "").strip()), axis=1)
 
     # insert columns for binary decision variables and dimod.Binary objects
     create_binary_vars(df)
 
     return df
-
 
 
 def format_objective(df, col_name):
@@ -128,11 +385,11 @@ def format_constraints(df, info):
         terms = " + ".join(df[item["col_name"]].map(str) + df["x_values"])
         op = item["operator"]
         value = str(item["comparison_value"])
-        result_inequality += " ".join([terms, op, value]) + "\n"
+        result_inequality += " ".join([terms, op, value]) + "\n "
     return result_inequality
 
 
-def show_cqm(objective, constraints):
+def show_cqm(objective, CONSTRAINTS):
     """
     Formats the objective and constraints for pretty-printing
     Returns: str
@@ -143,7 +400,7 @@ def show_cqm(objective, constraints):
         the constraints
     """
 
-    return "Minimize " + objective + "\n\nConstraints\n" + "\n".join(constraints)
+    return "Minimize " + objective + "\n\nConstraints\n" + "\n".join(CONSTRAINTS)
 
 
 def create_cqm_model():
@@ -153,6 +410,7 @@ def create_cqm_model():
     """
 
     return dimod.CQM()
+
 
 
 def define_objective(df, cqm, col_name):
@@ -186,58 +444,8 @@ def define_one_hot(df, cqm, col_name):
         cqm.add_discrete(sum(constraint_terms))
 
 
-def define_one_hot_new(df, cqm, col_name):
-    """
-    Applies one-hot constraints to the CQM
 
-    df : pandas.DataFrame
-    cqm : dimod.ConstrainedQuadraticModel
-    col_name : str
-        name of column in `df` that contains item categories
-    """
-
-    #for category in df[col_name].unique():
-    #    constraint_terms = list(df[df["leg"] == category]["binary_obj"])
-    #    cqm.add_discrete(sum(constraint_terms))
-
-    #x, y = dimod.Binaries(df.at[1, "binary_obj"], df.at[2, "binary_obj"])
-    #cqm = dimod.ConstrainedQuadraticModel()
-    #cqm.add_constraint(x + y == 1, label='ABC_path')
-    #cqm.constraints['ABC_path '].to_polystring()
-
-    #cqm = dimod.ConstrainedQuadraticModel()
-    #x,y = dimod.Binaries([df.at[1, "binary_obj"], df.at[1, "binary_obj"]])
-    #cqm.add_discrete(sum([x,y]), label="ABC_path")
-
-    modes = [key for key in method.keys() if method[key]["use"]]
-    num_modes = len(modes)
-
-    path = [key for key in path.keys() if path[key]["use"]]
-    num_paths = len(path)
-    t= [dimod.Binary(f"{mode}_{i}") for i in range(num_paths) for mode in modes]
-
-    #cqm = dimod.ConstrainedQuadraticModel()
-
-    #cqm.set_objective(-_calculate_total(t, "Exercise", legs, locomotion_vals))
-    paths_total = sum(l["length"] for p in paths)
-    max_env_cost = round(paths_total * np.mean([min(env_cost), max(env_cost)]))
-
-    for leg in range(num_paths):
-        cqm.add_constraint(dimod.quicksum(t[num_modes*leg:num_modes*leg+num_modes]) == 1,
-            label=f"One-hot path{leg}")
-    cqm.add_constraint((t, "Environmental Cost", paths, locomotion_vals) <= max_env_cost,
-        label="Total cost",
-        weight=weight_vals["weight_cost"]["weight"],
-        penalty=weight_vals["weight_cost"]["penalty"])
-    cqm.add_constraint((t, "Time", num_path, locomotion_vals) <= 60,
-        label="Total time",
-        weight=weight_vals["weight_time"]["weight"],
-        penalty=weight_vals["weight_time"]["penalty"])
-    
-    
-
-
-def define_constraints(df, cqm, constraints):
+def define_constraints(df, cqm, CONSTRAINTS):
     """
     Applies inequality constraints to the CQM
 
@@ -249,8 +457,9 @@ def define_constraints(df, cqm, constraints):
         - operators: "=", "<=", ">=", ">", "<" or "="
         - comparison_values: right-hand side values of constraints
     """
-
-    for item in constraints:
+    
+    for item in CONSTRAINTS:
+        print(item)
         constraint_terms = df[item["col_name"]] * df["binary_obj"]
 
         if item["operator"] == "<=":
@@ -327,7 +536,7 @@ def print_cqm_stats(cqm):
     subtables.append(bt.BeautifulTable())
     subtables[-1].columns.header = ["EQ", "LT", "GT"]
     subtables[-1].rows.append(
-        [num_equality_constraints - num_discretes, num_le_inequality_constraints, num_ge_inequality_constraints]
+        [num_equality_constraints - num_discretes, num_le_inequality_constraints, CONSTRAINTS]
     )
     # subtable styling
     for tbl in subtables:
@@ -392,6 +601,47 @@ def format_cqm_results(df, results):
         filtered CQM results, as returned by `cqm_sample`
     """
 
+    
+    for sample in results.record:  
+        counter=0
+        modes_chosen=[]
+        index_List=[]
+        sol_num_list=[]
+
+        if sample not in modes_chosen:
+            modes_chosen.append(sample)
+            counter+=1
+        
+            for indexSearch in range(len(sample[0])):
+                if sample[0][indexSearch] == 1:
+                    index_List.append(indexSearch)
+    print(index_List)
+
+    print(modes_chosen,"\n")
+    print("Number of solutions chosen:", counter,"\n")
+
+    length=0
+    time=0
+    cost=0
+    env_cost=0
+
+    counter2=0
+    print("The combined solution is: \n")
+    for item in index_List:
+        counter2+=1
+        print("Mode",counter2,"chosen:",df["modes"][item]," for leg",df["leg"][item])
+        length+= df["length"][item]
+
+        cost+= df["cost"][item]
+        cost=round(cost,2)
+        new_cost="$"+str(cost)
+
+        time+= df["time"][item]
+        env_cost+= df["env_cost"][item]
+        
+    
+    print("\n DETAILS: \n","This route is", round(length,3), "miles long.","The cost of this route is ",new_cost, ", it will take you",round(time,1),"minutes to complete, and it will release",env_cost,"lbs of CO2. Safe traveling!")
+                
     formatted_results = []
     imp_column_names = df.columns[2:-5]
     header = list(df["leg"].unique()) + list(imp_column_names) + ["energy", "num_occ"]
@@ -400,32 +650,7 @@ def format_cqm_results(df, results):
     # if no feasible solutions were found,
     if results is None:
         return formatted_results
-
-    # otherwise, build the data table
-    for record in results.record:
-        sample = record["sample"]
-        x_indicies = [index for index, value in enumerate(sample) if value == 1]
-        x_values = [results.variables[index] for index in x_indicies]
-        decision_data_df = df.loc[df["index"].isin(x_values)]
-        samples = []
-        num_of_legs = len(df["leg"].unique())
-
-        for leg in df["leg"].unique():
-            item_index_sample = decision_data_df.loc[decision_data_df["leg"] == leg, "method"]
-            item_index_sample_two = decision_data_df.loc[decision_data_df["leg"] == leg, "env_cost"]
-            if (len(item_index_sample) != 1) or (len(item_index_sample_two) != 1):
-                print("One-Hot constraint not met")
-                continue
-            samples.append(item_index_sample.to_list()[0])
-
-        if len(samples) != num_of_legs:
-            print("Number of types of items should equal length of samples list")
-            continue
-
-        samples.extend([str(sum(decision_data_df[column_name])) for column_name in imp_column_names])
-        samples.append(str(record["energy"]))
-        samples.append(str(record["num_occurrences"]))
-        formatted_results.append(samples)
+        formatted_results.append(modes_chosen)
 
     return formatted_results
 
@@ -487,7 +712,7 @@ def load_results(results_path):
     return loaded_sample_set
 
 
-def print_hamiltonian(df, objective_column, one_hot_column, constraints):
+def print_hamiltonian(df, objective_column,one_hot_column, CONSTRAINTS):
     """
     Formats and prints the Hamiltonian corresponding to the CQM defined by the
     arguments.
@@ -510,15 +735,14 @@ def print_hamiltonian(df, objective_column, one_hot_column, constraints):
 
     # Get one-hot constraint string
     one_hot = format_one_hot(df, one_hot_column)
-
     # Get constraint string
-    ineq = format_constraints(df, constraints)
+    ineq = format_constraints(df, CONSTRAINTS)
 
     # Format and print QUBO
-    print(show_cqm(objective, [one_hot, ineq]))
+    print(show_cqm(objective, [ineq]))
 
 
-def resolve_cqm(df, objective_column, one_hot_column, constraints, label):
+def resolve_cqm(df, objective_column, one_hot_column,CONSTRAINTS, label):
     """
     Builds and solves the CQM model as defined by the arguments. Also formats
     and saves the results from DWave.
@@ -546,13 +770,11 @@ def resolve_cqm(df, objective_column, one_hot_column, constraints, label):
     define_objective(df, cqm_model, objective_column)
 
     # Set one-hot constraints
-    #define_one_hot(df, cqm_model, one_hot_column)
-
-    #new one-hot function to set one-hot constraints
     define_one_hot(df, cqm_model, one_hot_column)
 
+
     # Set inequality constraints
-    define_constraints(df, cqm_model, constraints)
+    define_constraints(df, cqm_model, CONSTRAINTS)
 
     # Print additional CQM information
     print_cqm_stats(cqm_model)
@@ -591,7 +813,7 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
     df = read_and_format(input_csv)
     print(df)
     # Print problem to screen
-    print_hamiltonian(df, objective_column, one_hot_column, constraints)
+    print_hamiltonian(df, objective_column,one_hot_column, CONSTRAINTS)
 
     #sys.exit(0)
 
@@ -599,71 +821,44 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
     result_loc = resolve_cqm(df, objective_column, one_hot_column, constraints, label)
 
     # Load saved results
-    loaded_results = load_results(result_loc)
+    #loaded_results = load_results(result_loc)
 
     # Print formatted results to screen
-    data = format_cqm_results(df, loaded_results)
-    table = bt.BeautifulTable(maxwidth=120)
-    # add data to table
-    table.columns.header = data[0]
-    for row in data[1:]:
-        table.rows.append(row)
-    # style stuff
-    table.columns.header.separator = "="
-    # override padding so it's not so wide
-    table.columns.padding_left = 0
-    table.columns.padding_right = 0
-    # col width for numeric columns
+    #data = format_cqm_results(df, loaded_results)
 
-    #tmp = [8, 8, 8, 8, 8, 8]
+    #table = bt.BeautifulTable(maxwidth=120)
+
+    #table.columns.header.separator = "="
+    # override padding so it's not so wide
+    #table.columns.padding_left = 0
+    #table.columns.padding_right = 0
+    # col width for numeric columns
 
     # use the rest of the space for meal items columns
 
-    #table.columns.width = [(120 - sum(tmp)) // 5] * 5 + tmp
-    table.columns.width = 12
-    print(table)
-    print()
-    print(f"Results written to {result_loc.replace('./output', 'data')}")
-
-#8/12/23 - 8/14/23
-def create_new_table(df):
-    df[leg]="AE"
-    length=0
-    time=0
-    cost=0
-    env_cost=0
-    segment_start="A"
-    segment_end="E"
-    while segment_end != "E":
-
-        #from start point (A), check where we can move to in an if or while loop, and check if where we finish =E. create counter to check #of steps
-        #if it finishes at E, then append row with updated characteristics to new table
-        #
-
-        segment_end=end[randint(1,4)]
-        #Add the length, time, and cost properties of segment chosen here
-        length+=
-        time+=
-        cost+=
-        env_cost+=
-        segment_end=
-        if segment_end=="E" then
-            .append()
+    #table.columns.width = 12
+    #print(table)
+    #print()
+    #print(f"Results written to {result_loc.replace('./output', 'data')}")
             
     
 #-------
 
 if __name__ == "__main__":
 
-    #INPUT_CSV = "/app/data/chicken_waffles_data.csv"
     INPUT_CSV = dataFile
-    OBJECTIVE_COLUMN = "env_cost"
+    OBJECTIVE_COLUMN = "time"
     ONE_HOT_COLUMN = "leg"
-    CONSTRAINTS = [{"col_name" : "time", "operator" : "<=", "comparison_value" : 60}]
+    CONSTRAINTS = [{"col_name" : "env_cost", "operator" : "<=", "comparison_value" : 100}]
+    CONSTRAINTS.append({"col_name" : "cost", "operator" : "<=", "comparison_value" : 40})
+    #CONSTRAINTS.append({"col_name" : "ONE", "operator" : ">=", "comparison_value" : 1})
+
+    #CONSTRAINTS.append({"col_name" : "start" or "end", "operator" : "==", "comparison_value" : 1 or 5})
+    #CONSTRAINTS.append({"col_name" : "end", "operator" : "==", "comparison_value" : 5})
+
     # name to associate with DWave sampling run
     NAME = outputFileName
     # human-readable timestamp (in case of multiple runs)
     TIMESTAMP = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
     solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS, f"{NAME}-{TIMESTAMP}")
-    #solve_cqm(INPUT_CSV, OBJECTIVE_COLUMN, ONE_HOT_COLUMN, CONSTRAINTS)

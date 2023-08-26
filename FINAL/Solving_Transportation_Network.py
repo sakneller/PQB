@@ -1,4 +1,3 @@
-#
 # Copyright 2014 Google Inc. All rights reserved.
 #
 #
@@ -16,6 +15,12 @@
 #
 
 """Performs requests to the Google Maps Distance Matrix API."""
+
+
+"""From the Intern:
+Here we are importing all the necessary libraries for the CQM and Google Maps API
+Distance Matrix to run."""
+
 
 import googlemaps
 from googlemaps import convert
@@ -161,10 +166,16 @@ def distance_matrix(client, origins, destinations,
 
     return client._request("/maps/api/distancematrix/json", params)
 
+
 key="AIzaSyApCDXCL7ELIu4HsLET8KFdKTUNrt2n8yc"
 client=googlemaps.Client(key)
 
-#Add input for origin and destination?
+
+"""From the Intern: 
+The following function reads the POI_TABLE.txt table where the values for origins, destinations
+and modes are stored and appends them to the origins, destinations, and modes lists."""
+
+
 origins = []
 destinations = []
 modes = []
@@ -191,11 +202,21 @@ for line in lines:
 
 #sys.exit()
 
-#origins=["Cary,NC,USA", "Durham,NC,USA"]
-#destinations=["Chapel Hill,NC,USA", "Fayettevile,NC,USA"]
-#modes=["driving", "walking", "transit","bicycling"]
 
-#dataTable = {"Origin":[],"Destination":[],"Method":[],"Length":[], "Duration":[]}
+"""
+From the Intern:
+The following for loop creates the pandas dataframe, which is then output to the csv file maps_data.csv.
+maps_data.csv is overwritten each time the program is runs. In the table, the column start is the origin,
+the column end is the destination, and modes is the mode chosen. Leg is the origin and destination connected
+with a hyphen, and one solution from each leg must be chosen, as defined by the one hot constraint in the
+main function at the end of the program. Time and Cost are rough estimates of the duration in minutes 
+and cost in dollars of the trip for each leg, and env_cost is the environmental cost, in terms of pounds
+of CO2 released. This is nested in a try & except loop because sometimes taking transit between two cities
+is not possible, as a bus or train route may not exist between the two cities. In that case, no row is created
+for
+"""
+
+
 df = pd.DataFrame()
 df2 = pd.DataFrame()
 
@@ -223,7 +244,7 @@ for o in origins:
                             if m == "walking" or m == "bicycling":
                                 env_cost = 0
                             elif m == "driving":
-                                env_cost = round(length_in_miles * 0.77,3)
+                                env_cost = round(length_in_miles * 0.88,3)
                             else:
                                 env_cost = round(0.59 * length_in_miles, 3)
 
@@ -249,40 +270,22 @@ df.to_csv("/workspace/PQB/FINAL/data/maps_data.csv")
 
 
 
+"""
+From the Intern: This marks the end of the code taken from the Google Maps Distance_Matrix code that is
+used in order to determine the exact distance between two points. From here on, the code was taken
+from the PQB Chicken & Waffle code that is linked in the README file.
+"""
 
 
 
-
-
-
-#From the intern 1:
-""" Most of this code has been taken from the example Chicken & Waffle problem from the White Paper made by 
-Polaris Quantum Biotech  regarding the usage of Quantum Computing  to solve a multivariable optimization to minimize 
-both the calories and the price of a meal from a menu that they created. 
-
-The constraints on this problem were that the CQM had to choose 1 item from each of the 5 categories: waffle, smear,
-chicken, drizzle, and a side. The CQM also had to keep the total number of calories below 700 while minizming the price.
-
-LINK TO PAPER: https://arxiv.org/pdf/2303.15419.pdf"""
-
-
-
-"""HOWEVER, the purpose of my internship was to repurpose this existing code and make it so that when the user input a table into
-the function it determined the best possible path(s) between two points by either walking, biking, driving, taking the bus, or the train."""
-
-
-
-#From the Intern 2:
-"""Here we are importing all the necessary libraries for the CQM to run."""
-
-
-#From the Intern 3:
-"""This part of the code ask the user to input the data file where their data is stored, and exits if the file does not exist.
-It also asks what the user wants their output file to be called, and asks if they want to exit the program, just in case."""
-
-
-#dataInput = input("What is the name of your data file?")
 dataFile = "/workspace/PQB/FINAL/data/maps_data.csv"
+
+
+"""
+From the Intern: This is a bit of sort-of redundant code to check if the csv table POI_TABLE
+can be found. If not, the system tells the program to stop running.
+"""
+
 
 if os.path.isfile(dataFile) == False:
     print("Sorry, the data file you specified does not exist!")
@@ -296,9 +299,13 @@ test = input("Do you want to keep running the program?")
 if test.title() == "No":
     sys.exit(0)
 
-#From the Intern 4
-"""From here on, the majority of the code & comments were created by Polaris QB unless noted otherwise.
-There are comments inside most of the function explaining the functionality of them."""
+
+"""
+From the Intern:
+From here on, the majority of the code & comments were created by Polaris QB unless noted otherwise.
+There are comments inside most of the function explaining the functionality of them.
+Comments made by the intern will begin with "From the Intern."
+"""
 
 
 def create_binary_vars(df):
@@ -312,7 +319,6 @@ def create_binary_vars(df):
 
     df["x_values"] = list(f"x{idx}" for idx in df.index)
     df["binary_obj"] = df.apply(lambda row : dimod.Binary(row["index"]), axis=1)
-
 
 def read_and_format(csv_path):
     """
@@ -335,7 +341,6 @@ def read_and_format(csv_path):
 
     return df
 
-
 def format_objective(df, col_name):
     """
     Formats the objective function for pretty-printing
@@ -349,7 +354,6 @@ def format_objective(df, col_name):
 
     result = df[col_name].map(str) + df["x_values"]
     return " + ".join(result)
-
 
 def format_one_hot(df, col_name):
     """
@@ -365,7 +369,6 @@ def format_one_hot(df, col_name):
     for category in df[col_name].unique():
         result += " + ".join(df[df[col_name] == category]["x_values"]) + " = 1\n"
     return result
-
 
 def format_constraints(df, info):
     """
@@ -388,7 +391,6 @@ def format_constraints(df, info):
         result_inequality += " ".join([terms, op, value]) + "\n "
     return result_inequality
 
-
 def show_cqm(objective, CONSTRAINTS):
     """
     Formats the objective and constraints for pretty-printing
@@ -402,7 +404,6 @@ def show_cqm(objective, CONSTRAINTS):
 
     return "Minimize " + objective + "\n\nConstraints\n" + "\n".join(CONSTRAINTS)
 
-
 def create_cqm_model():
     """
     Initialize the CQM object
@@ -410,8 +411,6 @@ def create_cqm_model():
     """
 
     return dimod.CQM()
-
-
 
 def define_objective(df, cqm, col_name):
     """
@@ -428,6 +427,12 @@ def define_objective(df, cqm, col_name):
     cqm.set_objective(sum(objective_terms))
 
 
+"""
+From the Intern:
+The following function ensures that only one solution is chosen for each 
+leg, or origin-destination pair.
+"""
+
 
 def define_one_hot(df, cqm, col_name):
     """
@@ -442,8 +447,6 @@ def define_one_hot(df, cqm, col_name):
     for category in df[col_name].unique():
         constraint_terms = list(df[df["leg"] == category]["binary_obj"])
         cqm.add_discrete(sum(constraint_terms))
-
-
 
 def define_constraints(df, cqm, CONSTRAINTS):
     """
@@ -474,7 +477,6 @@ def define_constraints(df, cqm, CONSTRAINTS):
             cqm.add_constraint(sum(constraint_terms) == item["comparison_value"])
         else:
             raise Exception(f"Your choice of {item['comparison_value']} is invalid. Choose from '>', '<', '>=', '<=' or '='")
-
 
 def print_cqm_stats(cqm):
     """
@@ -554,7 +556,6 @@ def print_cqm_stats(cqm):
     print("=" * (padding // 2), title, "=" * (padding // 2 + padding % 2))
     print(full_table)
 
-
 def cqm_sample(cqm, label):
     """
     Samples the CQM model and filters out non-feasible solutions
@@ -591,6 +592,13 @@ def cqm_sample(cqm, label):
     return feasible_sampleset
 
 
+"""
+From the Intern:
+Searches through all the results that the CQM has chosen and outputs the characteristics
+of the solution chosen for each leg, and the overall solution.
+"""
+
+
 def format_cqm_results(df, results):
     """
     Formats the CQM results into 2d-array (for easily parsing to CSV etc).
@@ -600,7 +608,6 @@ def format_cqm_results(df, results):
     results : dimod.SampleSet
         filtered CQM results, as returned by `cqm_sample`
     """
-
     
     for sample in results.record:  
         counter=0
@@ -638,7 +645,6 @@ def format_cqm_results(df, results):
 
         time+= df["time"][item]
         env_cost+= df["env_cost"][item]
-        
     
     print("\n DETAILS: \n","This route is", round(length,3), "miles long.","The cost of this route is ",new_cost, ", it will take you",round(time,1),"minutes to complete, and it will release",env_cost,"lbs of CO2. Safe traveling!")
                 
@@ -653,7 +659,6 @@ def format_cqm_results(df, results):
         formatted_results.append(modes_chosen)
 
     return formatted_results
-
 
 def save_cqm_results(cqm, solutions, formatted_results, label):
     """
@@ -687,7 +692,6 @@ def save_cqm_results(cqm, solutions, formatted_results, label):
         csv_writer.writerows(formatted_results)
 
     return os.path.join(folder, "sample_set.pkl")
-
 
 def load_results(results_path):
     """
@@ -741,7 +745,6 @@ def print_hamiltonian(df, objective_column,one_hot_column, CONSTRAINTS):
     # Format and print QUBO
     print(show_cqm(objective, [ineq]))
 
-
 def resolve_cqm(df, objective_column, one_hot_column,CONSTRAINTS, label):
     """
     Builds and solves the CQM model as defined by the arguments. Also formats
@@ -772,7 +775,6 @@ def resolve_cqm(df, objective_column, one_hot_column,CONSTRAINTS, label):
     # Set one-hot constraints
     define_one_hot(df, cqm_model, one_hot_column)
 
-
     # Set inequality constraints
     define_constraints(df, cqm_model, CONSTRAINTS)
 
@@ -787,7 +789,6 @@ def resolve_cqm(df, objective_column, one_hot_column,CONSTRAINTS, label):
 
     # Save results and model
     return save_cqm_results(cqm_model, feasible_solutions, formatted_results, label)
-
 
 def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
     """
@@ -811,38 +812,23 @@ def solve_cqm(input_csv, objective_column, one_hot_column, constraints, label):
 
     # Read in Data
     df = read_and_format(input_csv)
-    print(df)
+
     # Print problem to screen
     print_hamiltonian(df, objective_column,one_hot_column, CONSTRAINTS)
-
-    #sys.exit(0)
 
     # Create sampler and retrieve location of results
     result_loc = resolve_cqm(df, objective_column, one_hot_column, constraints, label)
 
     # Load saved results
-    #loaded_results = load_results(result_loc)
+    loaded_results = load_results(result_loc)
 
-    # Print formatted results to screen
-    #data = format_cqm_results(df, loaded_results)
 
-    #table = bt.BeautifulTable(maxwidth=120)
+"""
+From the Intern:
+This is the __main__ function, which actually runs the entire CQM. The one-hot & regular constraints are
+defined in this function, as well as the objective column.
+"""
 
-    #table.columns.header.separator = "="
-    # override padding so it's not so wide
-    #table.columns.padding_left = 0
-    #table.columns.padding_right = 0
-    # col width for numeric columns
-
-    # use the rest of the space for meal items columns
-
-    #table.columns.width = 12
-    #print(table)
-    #print()
-    #print(f"Results written to {result_loc.replace('./output', 'data')}")
-            
-    
-#-------
 
 if __name__ == "__main__":
 
@@ -850,14 +836,11 @@ if __name__ == "__main__":
     OBJECTIVE_COLUMN = "time"
     ONE_HOT_COLUMN = "leg"
     CONSTRAINTS = [{"col_name" : "env_cost", "operator" : "<=", "comparison_value" : 100}]
-    CONSTRAINTS.append({"col_name" : "cost", "operator" : "<=", "comparison_value" : 40})
-    #CONSTRAINTS.append({"col_name" : "ONE", "operator" : ">=", "comparison_value" : 1})
-
-    #CONSTRAINTS.append({"col_name" : "start" or "end", "operator" : "==", "comparison_value" : 1 or 5})
-    #CONSTRAINTS.append({"col_name" : "end", "operator" : "==", "comparison_value" : 5})
+    CONSTRAINTS.append({"col_name" : "cost", "operator" : "<=", "comparison_value" : 100})
 
     # name to associate with DWave sampling run
     NAME = outputFileName
+
     # human-readable timestamp (in case of multiple runs)
     TIMESTAMP = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 

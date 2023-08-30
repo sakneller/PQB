@@ -167,7 +167,7 @@ def distance_matrix(client, origins, destinations,
     return client._request("/maps/api/distancematrix/json", params)
 
 
-key="AIzaSyApCDXCL7ELIu4HsLET8KFdKTUNrt2n8yc"
+key="PUT YOUR API KEY HERE"
 client=googlemaps.Client(key)
 
 
